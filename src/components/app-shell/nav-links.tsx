@@ -9,7 +9,9 @@ import {
   LayoutDashboard,
   PackageMinus,
   PackagePlus,
+  ReceiptText,
   Settings,
+  Tags,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "cn";
@@ -20,7 +22,9 @@ function items(oldBatches: number): Item[] {
   return [
     { href: "/", label: "Overview", icon: LayoutDashboard, match: (p) => p === "/" },
     { href: "/items", label: "Items", icon: ClipboardList, match: (p) => p.startsWith("/items") },
+    { href: "/orders", label: "Orders", icon: ReceiptText, match: (p) => p.startsWith("/orders") },
     { href: "/old-stock", label: "Old stock", icon: Hourglass, badge: oldBatches, match: (p) => p.startsWith("/old-stock") },
+    { href: "/price-list", label: "Price list", icon: Tags, match: (p) => p.startsWith("/price-list") },
     { href: "/history", label: "History", icon: History, match: (p) => p.startsWith("/history") },
     { href: "/settings", label: "Settings", icon: Settings, match: (p) => p.startsWith("/settings") },
   ];
@@ -92,7 +96,7 @@ export function MobileTabs({ oldBatches }: { oldBatches: number }) {
   ];
 
   return (
-    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t bg-white pb-[env(safe-area-inset-bottom)] lg:hidden">
+    <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t bg-white pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden">
       <ul className="mx-auto grid max-w-xl grid-cols-5">
         {tabs.map((tab) => {
           const active = tab.match(pathname);

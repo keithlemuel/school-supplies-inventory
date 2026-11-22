@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { fromDbError, type ActionResult } from "@/lib/action-result";
-import { qty } from "@/lib/format";
+import { count, qty } from "@/lib/format";
 import { createClient } from "@/lib/supabase/server";
 import { IN_REASONS, OUT_REASONS } from "./reasons";
 
@@ -44,6 +44,31 @@ const itemSchema = z.object({
   notes: z.string().max(500, "Keep the notes under 500 characters."),
 });
 
+type UnitInput = { name: string; contains: number; price: number | null };
+
+/** Reads the "bigger units" rows of the item form. Rows left completely empty are ignored. */
+function parseUnits(formData: FormData, baseUnit: string): UnitInput[] | string {
+  const names = formData.getAll("unitName").map((value) => String(value).trim());
+  const holds = formData.getAll("unitContains").map((value) => String(value).trim());
+  const prices = formData.getAll("unitPrice").map((value) => String(value).trim());
+
+  const units: UnitInput[] = [];
+  for (let index = 0; index < names.length; index++) {
+    const [name, contains, price] = [names[index], holds[index] ?? "", prices[index] ?? ""];
+    if (!name && !contains && !price) continue;
+    if (!name) return "Name each bigger unit, such as box or ream.";
+    if (name.length > 20) return "Keep unit names short.";
+    if (name.toLowerCase() === baseUnit.toLowerCase()) return `"${name}" is already the smallest unit.`;
+    if (units.some((unit) => unit.name.toLowerCase() === name.toLowerCase())) return `"${name}" is listed twice.`;
+    if (!/^\d+$/.test(contains) || Number(contains) < 2) {
+      return `Say how many ${baseUnit} one ${name} holds. It has to be 2 or more.`;
+    }
+    if (!/^(\d+(\.\d{1,2})?)?$/.test(price)) return `Enter the ${name} price like 275 or 275.50.`;
+    units.push({ name, contains: Number(contains), price: price === "" ? null : Number(price) });
+  }
+  return units;
+}
+
 export async function saveItem(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const id = text(formData, "id");
   const parsed = itemSchema.safeParse({
@@ -56,6 +81,11 @@ export async function saveItem(_prev: ActionResult, formData: FormData): Promise
     notes: text(formData, "notes"),
   });
   if (!parsed.success) return fieldErrors(parsed.error);
+
+  const units = parseUnits(formData, parsed.data.unit);
+  if (typeof units === "string") {
+    return { ok: false, message: "Check the highlighted fields.", fieldErrors: { units } };
+  }
 
   const values = {
     name: parsed.data.name,
@@ -81,6 +111,13 @@ export async function saveItem(_prev: ActionResult, formData: FormData): Promise
     itemId = data.id;
   }
 
+  const { error: unitsError } = await supabase.rpc("set_item_units", { p_item_id: itemId, p_units: units });
+  if (unitsError) {
+    console.error("[db]", unitsError.code, unitsError.message);
+    revalidatePath("/", "layout");
+    return { ok: false, message: "The item was saved, but its bigger units were not. Open the item and try again." };
+  }
+
   revalidatePath("/", "layout");
   redirect(`/items/${itemId}`);
 }
@@ -95,6 +132,27 @@ function itemError(error: Parameters<typeof fromDbError>[0]): ActionResult {
     };
   }
   return fromDbError(error);
+}
+
+/** Changes one price from the price list. An empty price clears it. */
+export async function setPrice(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const parsed = optionalMoney.safeParse(text(formData, "price"));
+  if (!parsed.success) return { ok: false, message: "Enter an amount like 12 or 12.50." };
+
+  const supabase = await createClient();
+  const id = text(formData, "id");
+  // The price list edits both the smallest-unit price (on the item) and the bigger-unit prices.
+  const { error } =
+    text(formData, "kind") === "unit"
+      ? await supabase.from("item_units").update({ selling_price: parsed.data }).eq("id", id)
+      : await supabase
+          .from("items")
+          .update({ selling_price: parsed.data, updated_at: new Date().toISOString() })
+          .eq("id", id);
+  if (error) return fromDbError(error);
+
+  revalidatePath("/", "layout");
+  return { ok: true, stamp: Date.now() };
 }
 
 export async function setItemArchived(id: string, archived: boolean): Promise<void> {
@@ -123,6 +181,33 @@ const stockInSchema = z.object({
   reason: z.enum(Object.keys(IN_REASONS) as [keyof typeof IN_REASONS, ...(keyof typeof IN_REASONS)[]]),
 });
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
+/**
+ * The bigger unit a quantity was entered in, looked up on the server so the
+ * multiplier never comes from the browser. Null means the smallest unit.
+ */
+async function pickedUnit(
+  supabase: Supabase,
+  itemId: string,
+  unitId: string,
+): Promise<{ unit: { name: string; contains: number } | null; error?: string }> {
+  if (!unitId) return { unit: null };
+  const { data } = await supabase
+    .from("item_units")
+    .select("name, contains")
+    .eq("id", unitId)
+    .eq("item_id", itemId)
+    .maybeSingle();
+  return data ? { unit: data } : { unit: null, error: "That unit was changed or removed. Reload the page and try again." };
+}
+
+/** "2 box (100 pc)" when entered in a bigger unit, otherwise just "100 pc". */
+function entered(quantity: number, unit: { name: string; contains: number } | null, baseUnit: string | null | undefined) {
+  if (!unit) return qty(quantity, baseUnit);
+  return `${count(quantity)} ${unit.name} (${qty(quantity * unit.contains, baseUnit)})`;
+}
+
 export async function stockIn(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
   const parsed = stockInSchema.safeParse({
     itemId: text(formData, "itemId"),
@@ -137,11 +222,17 @@ export async function stockIn(_prev: ActionResult, formData: FormData): Promise<
   const input = parsed.data;
 
   const supabase = await createClient();
+  const picked = await pickedUnit(supabase, input.itemId, text(formData, "unitId"));
+  if (picked.error) return { ok: false, message: picked.error };
+  const per = picked.unit?.contains ?? 1;
+  const baseQuantity = input.quantity * per;
+
   const { error } = await supabase.rpc("receive_stock", {
     p_item_id: input.itemId,
-    p_quantity: input.quantity,
+    p_quantity: baseQuantity,
     p_received_on: input.receivedOn,
-    p_unit_cost: input.unitCost ?? undefined,
+    // The cost was typed for the unit received; stock keeps it per smallest unit.
+    p_unit_cost: input.unitCost == null ? undefined : Math.round((input.unitCost / per) * 100) / 100,
     p_supplier: input.supplier || undefined,
     p_note: input.note || undefined,
     p_reason: input.reason,
@@ -154,14 +245,14 @@ export async function stockIn(_prev: ActionResult, formData: FormData): Promise<
     .eq("id", input.itemId)
     .maybeSingle();
   // Say how the shelf is now split, so the older stock is not lost in the new total.
-  const earlier = (item?.on_hand ?? input.quantity) - input.quantity;
-  const added = `Added ${qty(input.quantity, item?.unit)} of ${item?.name ?? "the item"}.`;
+  const earlier = (item?.on_hand ?? baseQuantity) - baseQuantity;
+  const added = `Added ${entered(input.quantity, picked.unit, item?.unit)} of ${item?.name ?? "the item"}.`;
   revalidatePath("/", "layout");
   return {
     ok: true,
     message:
       earlier > 0
-        ? `${added} On the shelf now: ${qty(earlier, item?.unit)} from earlier deliveries and ${qty(input.quantity, item?.unit)} from this one.`
+        ? `${added} On the shelf now: ${qty(earlier, item?.unit)} from earlier deliveries and ${qty(baseQuantity, item?.unit)} from this one.`
         : added,
     stamp: Date.now(),
     // A delivery usually has several items, so the date and supplier stay filled in.
@@ -197,9 +288,12 @@ export async function stockOut(_prev: ActionResult, formData: FormData): Promise
   const input = parsed.data;
 
   const supabase = await createClient();
+  const picked = await pickedUnit(supabase, input.itemId, text(formData, "unitId"));
+  if (picked.error) return { ok: false, message: picked.error };
+
   const { error } = await supabase.rpc("remove_stock", {
     p_item_id: input.itemId,
-    p_quantity: input.quantity,
+    p_quantity: input.quantity * (picked.unit?.contains ?? 1),
     p_reason: input.reason,
     p_occurred_on: input.occurredOn,
     p_note: input.note || undefined,
@@ -211,7 +305,7 @@ export async function stockOut(_prev: ActionResult, formData: FormData): Promise
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `Took out ${qty(input.quantity, item?.unit)} of ${item?.name ?? "the item"}.`,
+    message: `Took out ${entered(input.quantity, picked.unit, item?.unit)} of ${item?.name ?? "the item"}.`,
     stamp: Date.now(),
     keep: { occurredOn: input.occurredOn, reason: input.reason },
   };

@@ -25,17 +25,121 @@ export type Database = {
           Tables: {
             "categories": {
                   Row: {
-                    "created_at": string,"id": string,"name": string
+                    "created_at": string,"id": string,"name": string,"parent_id": string | null
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"id"?: string,"name": string
+                    "created_at"?: string,"id"?: string,"name": string,"parent_id"?: string | null
                   }
                   Update: {
-                    "created_at"?: string,"id"?: string,"name"?: string
+                    "created_at"?: string,"id"?: string,"name"?: string,"parent_id"?: string | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "categories_parent_id_fkey"
+      columns: ["parent_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"customers": {
+                  Row: {
+                    "address": string | null,"created_at": string,"id": string,"name": string
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "address"?: string | null,"created_at"?: string,"id"?: string,"name": string
+                  }
+                  Update: {
+                    "address"?: string | null,"created_at"?: string,"id"?: string,"name"?: string
                   }
                   Relationships: [
                     
+                  ]
+                },"delivery_receipt_lines": {
+                  Row: {
+                    "description": string,"id": string,"item_id": string | null,"position": number,"quantity": number,"receipt_id": string,"stock_quantity": number | null,"unit": string,"unit_price": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "description": string,"id"?: string,"item_id"?: string | null,"position": number,"quantity": number,"receipt_id": string,"stock_quantity"?: number | null,"unit": string,"unit_price": number
+                  }
+                  Update: {
+                    "description"?: string,"id"?: string,"item_id"?: string | null,"position"?: number,"quantity"?: number,"receipt_id"?: string,"stock_quantity"?: number | null,"unit"?: string,"unit_price"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_receipt_lines_item_id_fkey"
+      columns: ["item_id"]
+isOneToOne: false
+      referencedRelation: "item_stock"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delivery_receipt_lines_item_id_fkey"
+      columns: ["item_id"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delivery_receipt_lines_receipt_id_fkey"
+      columns: ["receipt_id"]
+isOneToOne: false
+      referencedRelation: "delivery_receipts"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"delivery_receipts": {
+                  Row: {
+                    "created_at": string,"created_by": string | null,"customer_address": string | null,"customer_id": string | null,"customer_name": string,"delivered_on": string,"id": string,"number": string,"total": number
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "created_at"?: string,"created_by"?: string | null,"customer_address"?: string | null,"customer_id"?: string | null,"customer_name": string,"delivered_on": string,"id"?: string,"number": string,"total"?: number
+                  }
+                  Update: {
+                    "created_at"?: string,"created_by"?: string | null,"customer_address"?: string | null,"customer_id"?: string | null,"customer_name"?: string,"delivered_on"?: string,"id"?: string,"number"?: string,"total"?: number
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "delivery_receipts_created_by_fkey"
+      columns: ["created_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delivery_receipts_customer_id_fkey"
+      columns: ["customer_id"]
+isOneToOne: false
+      referencedRelation: "customers"
+      referencedColumns: ["id"]
+    }
+                  ]
+                },"item_units": {
+                  Row: {
+                    "contains": number,"created_at": string,"id": string,"item_id": string,"name": string,"selling_price": number | null
+                  }
+                  ComputedFields: never
+                  Insert: {
+                    "contains": number,"created_at"?: string,"id"?: string,"item_id": string,"name": string,"selling_price"?: number | null
+                  }
+                  Update: {
+                    "contains"?: number,"created_at"?: string,"id"?: string,"item_id"?: string,"name"?: string,"selling_price"?: number | null
+                  }
+                  Relationships: [
+                    {
+      foreignKeyName: "item_units_item_id_fkey"
+      columns: ["item_id"]
+isOneToOne: false
+      referencedRelation: "item_stock"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "item_units_item_id_fkey"
+      columns: ["item_id"]
+isOneToOne: false
+      referencedRelation: "items"
+      referencedColumns: ["id"]
+    }
                   ]
                 },"items": {
                   Row: {
@@ -186,11 +290,17 @@ isOneToOne: false
                   ]
                 },"item_stock": {
                   Row: {
-                    "aging_quantity": number | null,"category_id": string | null,"category_name": string | null,"id": string,"is_archived": boolean,"is_low": boolean | null,"name": string,"notes": string | null,"old_quantity": number | null,"oldest_age_days": number | null,"oldest_received_on": string | null,"on_hand": number | null,"open_batches": number | null,"reorder_level": number,"selling_price": number | null,"sku": string | null,"stock_value": number | null,"unit": string
+                    "aging_quantity": number | null,"category_id": string | null,"category_name": string | null,"id": string,"is_archived": boolean,"is_low": boolean | null,"name": string,"notes": string | null,"old_quantity": number | null,"oldest_age_days": number | null,"oldest_received_on": string | null,"on_hand": number | null,"open_batches": number | null,"parent_category_id": string | null,"parent_category_name": string | null,"reorder_level": number,"selling_price": number | null,"sku": string | null,"stock_value": number | null,"unit": string
                   }
                   ComputedFields: never
                   Relationships: [
                     {
+      foreignKeyName: "categories_parent_id_fkey"
+      columns: ["parent_category_id"]
+isOneToOne: false
+      referencedRelation: "categories"
+      referencedColumns: ["id"]
+    },{
       foreignKeyName: "items_category_id_fkey"
       columns: ["category_id"]
 isOneToOne: false
@@ -201,11 +311,17 @@ isOneToOne: false
                 }
           }
           Functions: {
-            "receive_stock":
+            "create_delivery_receipt":
+{ Args: { "p_customer_address": string,"p_customer_name": string,"p_delivered_on": string,"p_lines": Json,"p_number": string }; Returns: string
+                           },
+"receive_stock":
 { Args: { "p_item_id": string,"p_note"?: string,"p_quantity": number,"p_reason"?: string,"p_received_on"?: string,"p_supplier"?: string,"p_unit_cost"?: number }; Returns: string
                            },
 "remove_stock":
 { Args: { "p_batch_id"?: string,"p_item_id": string,"p_note"?: string,"p_occurred_on"?: string,"p_quantity": number,"p_reason": string }; Returns: undefined
+                           },
+"set_item_units":
+{ Args: { "p_item_id": string,"p_units": Json }; Returns: undefined
                            },
 "today":
 { Args: Record<PropertyKey, never>; Returns: string

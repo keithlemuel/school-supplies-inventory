@@ -1,6 +1,8 @@
 import "server-only";
 
 import { createClient } from "@/lib/supabase/server";
+import { categoryPath, type Category } from "./categories";
+import type { ItemUnit } from "./units";
 
 export type Settings = { agingAfterDays: number; oldAfterDays: number };
 
@@ -14,15 +16,15 @@ export async function getSettings(): Promise<Settings> {
   return { agingAfterDays: data.aging_after_days, oldAfterDays: data.old_after_days };
 }
 
-export async function listCategories() {
+export async function listCategories(): Promise<Category[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase.from("categories").select("id, name").order("name");
+  const { data, error } = await supabase.from("categories").select("id, name, parent_id").order("name");
   if (error) throw new Error(`Could not load categories: ${error.message}`);
   return data;
 }
 
 const ITEM_COLUMNS =
-  "id, name, sku, unit, category_id, category_name, selling_price, reorder_level, notes, is_archived, on_hand, old_quantity, aging_quantity, stock_value, oldest_received_on, oldest_age_days, open_batches, is_low";
+  "id, name, sku, unit, category_id, category_name, selling_price, reorder_level, notes, is_archived, on_hand, old_quantity, aging_quantity, stock_value, oldest_received_on, oldest_age_days, open_batches, is_low, parent_category_id, parent_category_name";
 
 /** One row of the item_stock view. Views report every column as nullable; these never are. */
 export type ItemStock = {
@@ -31,6 +33,7 @@ export type ItemStock = {
   sku: string | null;
   unit: string;
   categoryId: string | null;
+  /** The full path when the item is in a subcategory: "Pens › Markers". */
   categoryName: string | null;
   sellingPrice: number | null;
   reorderLevel: number;
@@ -65,6 +68,8 @@ type ItemStockRow = {
   oldest_age_days: number | null;
   open_batches: number | null;
   is_low: boolean | null;
+  parent_category_id: string | null;
+  parent_category_name: string | null;
 };
 
 function toItem(row: ItemStockRow): ItemStock {
@@ -74,7 +79,7 @@ function toItem(row: ItemStockRow): ItemStock {
     sku: row.sku,
     unit: row.unit ?? "pc",
     categoryId: row.category_id,
-    categoryName: row.category_name,
+    categoryName: categoryPath(row.parent_category_name, row.category_name),
     sellingPrice: row.selling_price,
     reorderLevel: row.reorder_level ?? 0,
     notes: row.notes,
@@ -97,14 +102,20 @@ export async function listItems(filter: ItemFilter = {}): Promise<ItemStock[]> {
   let query = supabase.from("item_stock").select(ITEM_COLUMNS).order("name");
 
   query = query.eq("is_archived", filter.show === "archived");
-  if (filter.category) query = query.eq("category_id", filter.category);
+  // Picking a main category also finds the items in its subcategories.
+  if (filter.category && /^[0-9a-f-]{36}$/i.test(filter.category)) {
+    query = query.or(`category_id.eq.${filter.category},parent_category_id.eq.${filter.category}`);
+  }
   if (filter.show === "low") query = query.eq("is_low", true);
   if (filter.show === "old") query = query.gt("old_quantity", 0);
   if (filter.show === "out") query = query.eq("on_hand", 0);
 
   // Characters that mean something in a filter expression are dropped from the search text.
-  const q = filter.q?.replace(/[%_,()*\\"]/g, " ").trim();
-  if (q) query = query.or(`name.ilike.%${q}%,sku.ilike.%${q}%`);
+  // Every word has to appear, in any order, so "ballpen blue" finds "Ballpen, blue".
+  const words = filter.q?.replace(/[%_,()*\\"]/g, " ").split(/\s+/).filter(Boolean) ?? [];
+  for (const word of words.slice(0, 6)) {
+    query = query.or(`name.ilike.%${word}%,sku.ilike.%${word}%`);
+  }
 
   const { data, error } = await query;
   if (error) throw new Error(`Could not load items: ${error.message}`);
@@ -227,9 +238,25 @@ export async function listMovements(
   return { rows, hasMore: data.length > limit };
 }
 
+/** The bigger units of every item (or of one item), smallest first, keyed by item id. */
+export async function listUnitsByItem(itemId?: string): Promise<Map<string, ItemUnit[]>> {
+  const supabase = await createClient();
+  let query = supabase.from("item_units").select("id, item_id, name, contains, selling_price").order("contains");
+  if (itemId) query = query.eq("item_id", itemId);
+
+  const { data, error } = await query;
+  if (error) throw new Error(`Could not load item units: ${error.message}`);
+  const byItem = new Map<string, ItemUnit[]>();
+  for (const row of data) {
+    const unit = { id: row.id, name: row.name, contains: row.contains, price: row.selling_price };
+    byItem.set(row.item_id, [...(byItem.get(row.item_id) ?? []), unit]);
+  }
+  return byItem;
+}
+
 /** The short list the stock forms search through. */
 export async function listItemOptions() {
-  const items = await listItems();
+  const [items, units] = await Promise.all([listItems(), listUnitsByItem()]);
   return items.map((item) => ({
     id: item.id,
     name: item.name,
@@ -237,6 +264,7 @@ export async function listItemOptions() {
     unit: item.unit,
     onHand: item.onHand,
     oldestReceivedOn: item.oldestReceivedOn,
+    units: (units.get(item.id) ?? []).map(({ id, name, contains }) => ({ id, name, contains })),
   }));
 }
 export type ItemOption = Awaited<ReturnType<typeof listItemOptions>>[number];

@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/page-header";
 import { PageLoading } from "@/components/page-loading";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/features/auth/session";
+import { categoryOptions } from "@/features/inventory/categories";
 import { listCategories, listItems, listOpenBatches, type Batch, type ItemFilter } from "@/features/inventory/queries";
 import { count, date, money, qty } from "@/lib/format";
 
@@ -82,9 +83,9 @@ async function Content({ searchParams }: PageProps<"/items">) {
         </div>
         <select name="category" defaultValue={category} aria-label="Category" className={cn(selectClass, "w-auto min-w-40")}>
           <option value="">All categories</option>
-          {categories.map((option) => (
+          {categoryOptions(categories).map((option) => (
             <option key={option.id} value={option.id}>
-              {option.name}
+              {option.label}
             </option>
           ))}
         </select>

@@ -55,20 +55,53 @@ export async function addCategory(_prev: ActionResult, formData: FormData): Prom
   if (!name) return { ok: false, fieldErrors: { name: "Enter a category name." } };
   if (name.length > 40) return { ok: false, fieldErrors: { name: "Keep the name under 40 characters." } };
 
+  const parentId = text(formData, "parentId") || null;
+
   const supabase = await createClient();
-  const { error } = await supabase.from("categories").insert({ name });
+  const { error } = await supabase.from("categories").insert({ name, parent_id: parentId });
   if (error) {
-    if (error.code === "23505") return { ok: false, fieldErrors: { name: "That category already exists." } };
+    if (error.code === "23505") {
+      return { ok: false, fieldErrors: { name: parentId ? "That subcategory already exists there." : "That category already exists." } };
+    }
     return fromDbError(error);
   }
   revalidatePath("/", "layout");
   return { ok: true, stamp: Date.now() };
 }
 
-/** Items in a deleted category stay; they just have no category until one is picked. */
-export async function deleteCategory(id: string): Promise<void> {
+export async function renameCategory(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const id = text(formData, "id");
+  const name = text(formData, "name");
+  if (!name) return { ok: false, fieldErrors: { name: "Enter a category name." } };
+  if (name.length > 40) return { ok: false, fieldErrors: { name: "Keep the name under 40 characters." } };
+
   const supabase = await createClient();
-  const { error } = await supabase.from("categories").delete().eq("id", id);
-  if (error) throw new Error(`Could not delete the category: ${error.message}`);
+  const { data, error } = await supabase.from("categories").update({ name }).eq("id", id).select("id");
+  if (error) {
+    if (error.code === "23505") return { ok: false, fieldErrors: { name: "Another category already has that name." } };
+    return fromDbError(error);
+  }
+  if (data.length === 0) return { ok: false, message: "That category was deleted. Reload the page." };
+
+  // Items show their category's name, so every list that mentions it is refreshed.
   revalidatePath("/", "layout");
+  return { ok: true, stamp: Date.now() };
+}
+
+/**
+ * Items in a deleted category stay; they just have no category until one is
+ * picked. Subcategories of a deleted main category become main categories.
+ */
+export async function deleteCategory(_prev: ActionResult, formData: FormData): Promise<ActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase.from("categories").delete().eq("id", text(formData, "id"));
+  if (error) {
+    // A subcategory moving up would clash with a main category of the same name.
+    if (error.code === "23505") {
+      return { ok: false, message: "One of its subcategories has the same name as a main category. Rename or delete that subcategory first." };
+    }
+    return fromDbError(error);
+  }
+  revalidatePath("/", "layout");
+  return { ok: true, stamp: Date.now() };
 }

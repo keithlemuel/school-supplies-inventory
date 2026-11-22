@@ -1,45 +1,42 @@
 import type { Metadata } from "next";
 
+import { Brand } from "@/components/brand";
 import { SHOP_NAME } from "@/lib/shop";
 import { LoginForm } from "./login-form";
+import { Pencil } from "./pencil";
 
 export const metadata: Metadata = { title: "Sign in" };
 
+/*
+  The sign-in page is a sheet of ruled pad paper: a blank header, a red margin
+  line, and rules every 2.25rem. Everything written on it is a whole number of
+  rules tall (the `h-9` / `h-18` rows), so text and the two answer lines of the
+  form land on the paper's own rules.
+*/
 export default function LoginPage() {
   return (
-    <main className="grid min-h-dvh grid-rows-[auto_1fr] lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:grid-rows-1">
-      <section className="flex flex-col justify-between gap-10 bg-board px-6 py-8 text-white lg:px-14 lg:py-14">
-        <p className="font-heading text-xl leading-tight font-bold">
-          {SHOP_NAME}
-          <span className="block font-sans text-sm font-normal text-white/65">Inventory</span>
-        </p>
-        <div className="max-w-md">
-          <h1 className="text-3xl leading-[1.1] font-bold tracking-tight lg:text-5xl">
-            Know what is on the shelf, and how long it has been there.
-          </h1>
-          <p className="mt-5 hidden text-lg leading-relaxed text-white/75 lg:block">
-            Every delivery keeps its date, so the oldest notebooks, pens and paper are the first ones you sell or
-            clear out.
-          </p>
-          {/* A ruler, the same one that measures how old each delivery is inside the app. */}
-          <div aria-hidden className="mt-8 hidden h-3 max-w-sm overflow-hidden rounded-[3px] bg-white/12 lg:block">
-            <div className="flex h-full">
-              <div className="w-[25%] bg-[#58b88a]" />
-              <div className="w-[25%] bg-pencil" />
-              <div className="w-[30%] bg-[#e0685e]" />
-            </div>
-          </div>
-        </div>
-        <p className="hidden text-sm text-white/55 lg:block">For store staff only.</p>
-      </section>
+    <main className="relative flex min-h-dvh flex-col overflow-hidden bg-[#fdfdfa] [--paper-margin:2.5rem] sm:[--paper-margin:clamp(5rem,17vw,17rem)]">
+      {/* The margin line runs the full height of the sheet, header included. */}
+      <div aria-hidden className="absolute inset-y-0 left-(--paper-margin) w-0.5 bg-[#e0685e]/70" />
 
-      <section className="flex items-start justify-center px-6 py-10 lg:items-center">
-        <div className="w-full max-w-sm">
-          <h2 className="text-2xl font-bold tracking-tight">Sign in</h2>
-          <p className="mt-1 text-muted-foreground">Use the account that was set up for you.</p>
-          <LoginForm />
+      <Pencil className="pointer-events-none absolute top-11 -left-24 w-[40rem] max-w-none origin-left -rotate-2 drop-shadow-[0_10px_7px_rgb(20_48_38/0.22)] sm:top-14 sm:-left-12 sm:w-[clamp(46rem,80vw,70rem)]" />
+
+      <div className="h-36 shrink-0 sm:h-54" />
+
+      <div className="paper-rules flex-1 border-t border-[#a9c6e4] pr-5 pl-[calc(var(--paper-margin)+1.25rem)] sm:pl-[calc(var(--paper-margin)+2rem)]">
+        <h1 className="flex h-18 items-end pb-1.5 text-[2.75rem] leading-none font-bold tracking-tight">
+          Sign in
+          <span className="sr-only"> to the {SHOP_NAME} inventory</span>
+        </h1>
+        <p className="flex h-9 items-end pb-1.5 leading-none text-muted-foreground">
+          Use the account that was set up for you.
+        </p>
+        <LoginForm />
+        {/* Signed at the bottom of the sheet with the store's mark. */}
+        <div className="flex h-18 items-center">
+          <Brand detail="For store staff only." markClassName="size-9" detailClassName="text-muted-foreground" />
         </div>
-      </section>
+      </div>
     </main>
   );
 }

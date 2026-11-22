@@ -13,6 +13,13 @@ Every "Stock in" is saved as its own delivery (a batch) with the date it was rec
 - The Old stock page lists the oldest deliveries first, with a "Take out" button to record them as sold or disposed.
 - Nothing in the history is edited or deleted. A mistake is fixed with a new entry in the other direction ("Recount found more / less").
 
+## What else it does
+
+- **Categories and subcategories** (Pens > Markers), set up in Settings.
+- **Units**: an item is counted in its smallest unit (pc, pack) and can also come in bigger ones (box of 50, ream), each with its own price. Stock in, stock out and orders accept any of them.
+- **Price list**: every item and unit with its price, editable in place. "Save as PDF" prints a clean customer copy; "Download spreadsheet" gives a CSV. Stock counts and costs are never on it.
+- **Orders**: who it is for and what they are getting. Saving takes the inventory items out of stock and makes the delivery receipt in the store's own format (`src/features/deliveries/components/receipt-sheet.tsx`). Lines that are not inventory items are just written on the receipt.
+
 ## Run it on your computer
 
 Needs Node, pnpm and Docker.
@@ -44,5 +51,6 @@ There is no public sign-up page. Everyone with a sign-in can do everything.
 
 - `supabase/migrations` - tables, the stock in / stock out rules, and who can read what.
 - `src/features/inventory` - queries, server actions and the stock forms.
+- `src/features/deliveries` - orders and the delivery receipt.
 - `src/app/(app)` - the pages: Overview, Items, Stock in, Stock out, Old stock, History, Settings.
-- `src/lib/shop.ts` - the store name shown in the app.
+- `src/lib/shop.ts` - the store name shown in the app, and the letterhead on delivery receipts.

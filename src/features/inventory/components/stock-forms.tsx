@@ -10,6 +10,7 @@ import { date, qty } from "@/lib/format";
 import { stockIn, stockOut } from "../actions";
 import type { ItemOption } from "../queries";
 import { IN_REASONS, OUT_REASONS } from "../reasons";
+import { unitLabel } from "../units";
 import { ItemPicker } from "./item-picker";
 
 export function StockInForm({
@@ -54,7 +55,7 @@ export function StockInForm({
       <div key={state.stamp ?? 0} className="flex flex-col gap-5">
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Quantity received" htmlFor="quantity" error={errors.quantity}>
-            <TextInput id="quantity" name="quantity" inputMode="numeric" autoComplete="off" aria-invalid={Boolean(errors.quantity) || undefined} />
+            <QuantityWithUnit item={item} invalid={Boolean(errors.quantity)} />
           </Field>
           <Field
             label="Date received"
@@ -64,7 +65,13 @@ export function StockInForm({
           >
             <TextInput id="receivedOn" name="receivedOn" type="date" max={today} defaultValue={keep.receivedOn ?? today} />
           </Field>
-          <Field label="Cost per unit" htmlFor="unitCost" optional error={errors.unitCost} hint="What you paid, in pesos.">
+          <Field
+            label="Cost per unit"
+            htmlFor="unitCost"
+            optional
+            error={errors.unitCost}
+            hint={item && item.units.length > 0 ? "What you paid for one of the unit picked above." : "What you paid, in pesos."}
+          >
             <TextInput id="unitCost" name="unitCost" inputMode="decimal" autoComplete="off" aria-invalid={Boolean(errors.unitCost) || undefined} />
           </Field>
           <Field label="Supplier" htmlFor="supplier" optional error={errors.supplier}>
@@ -94,6 +101,35 @@ export function StockInForm({
         </Link>
       </div>
     </form>
+  );
+}
+
+/**
+ * The quantity box, with a unit dropdown beside it when the item also comes in
+ * bigger units (2 box instead of 100 pc). The dropdown starts over when the item changes.
+ */
+function QuantityWithUnit({ item, invalid }: { item: ItemOption | undefined; invalid: boolean }) {
+  return (
+    <div className="flex gap-2">
+      <TextInput
+        id="quantity"
+        name="quantity"
+        inputMode="numeric"
+        autoComplete="off"
+        aria-invalid={invalid || undefined}
+        className="min-w-0 flex-1"
+      />
+      {item && item.units.length > 0 ? (
+        <NativeSelect key={item.id} name="unitId" aria-label="Unit" defaultValue="" className="w-auto max-w-[55%]">
+          <option value="">{item.unit}</option>
+          {item.units.map((unit) => (
+            <option key={unit.id} value={unit.id}>
+              {unitLabel(unit, item.unit)}
+            </option>
+          ))}
+        </NativeSelect>
+      ) : null}
+    </div>
   );
 }
 
@@ -171,7 +207,7 @@ export function StockOutForm({
             error={errors.quantity}
             hint={available != null && item ? `Up to ${qty(available, item.unit)}.` : undefined}
           >
-            <TextInput id="quantity" name="quantity" inputMode="numeric" autoComplete="off" aria-invalid={Boolean(errors.quantity) || undefined} />
+            <QuantityWithUnit item={item} invalid={Boolean(errors.quantity)} />
           </Field>
           <Field label="Date" htmlFor="occurredOn" error={errors.occurredOn}>
             <TextInput id="occurredOn" name="occurredOn" type="date" max={today} defaultValue={keep.occurredOn ?? today} />

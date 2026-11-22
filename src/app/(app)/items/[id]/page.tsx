@@ -13,7 +13,8 @@ import { getCurrentUser } from "@/features/auth/session";
 import { setItemArchived } from "@/features/inventory/actions";
 import { AgeLegend, BatchList } from "@/features/inventory/components/batch-list";
 import { MovementsTable } from "@/features/inventory/components/movements-table";
-import { getItem, getSettings, listMovements, listOpenBatches } from "@/features/inventory/queries";
+import { getItem, getSettings, listMovements, listOpenBatches, listUnitsByItem } from "@/features/inventory/queries";
+import { inBiggerUnits, unitLabel } from "@/features/inventory/units";
 import { count, money, qty } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Item" };
@@ -24,17 +25,20 @@ async function Content({ params }: PageProps<"/items/[id]">) {
   const item = await getItem(id);
   if (!item) notFound();
 
-  const [settings, batches, history] = await Promise.all([
+  const [settings, batches, history, unitsByItem] = await Promise.all([
     getSettings(),
     listOpenBatches({ itemId: id }),
     listMovements({ itemId: id, limit: 20 }),
+    listUnitsByItem(id),
   ]);
+  const units = unitsByItem.get(id) ?? [];
+  const inBigger = inBiggerUnits(item.onHand, item.unit, units);
 
   const facts = [
-    { label: "On hand", value: qty(item.onHand, item.unit) },
+    { label: "On hand", value: qty(item.onHand, item.unit), detail: inBigger ? `or ${inBigger}` : undefined },
     { label: "Old stock", value: qty(item.oldQuantity, item.unit), alert: item.oldQuantity > 0 },
     { label: "Value at cost", value: money(item.stockValue) },
-    { label: "Selling price", value: money(item.sellingPrice) },
+    { label: `Price per ${item.unit}`, value: money(item.sellingPrice) },
   ];
 
   return (
@@ -91,9 +95,30 @@ async function Content({ params }: PageProps<"/items/[id]">) {
           >
             <dt className="text-sm font-medium text-muted-foreground">{fact.label}</dt>
             <dd className={`tabular mt-0.5 font-heading text-2xl font-bold ${fact.alert ? "text-old" : ""}`}>{fact.value}</dd>
+            {fact.detail ? <dd className="tabular text-sm text-muted-foreground">{fact.detail}</dd> : null}
           </div>
         ))}
       </dl>
+
+      {units.length > 0 ? (
+        <section aria-labelledby="units-heading" className="mt-8">
+          <h2 id="units-heading" className="mb-3 text-xl font-bold">
+            Units and prices
+          </h2>
+          <ul className="divide-y rounded-lg border bg-card sm:max-w-md">
+            <li className="flex items-center justify-between gap-4 px-4 py-2.5">
+              <span className="font-medium">{item.unit}</span>
+              <span className="tabular font-semibold">{money(item.sellingPrice)}</span>
+            </li>
+            {units.map((unit) => (
+              <li key={unit.id} className="flex items-center justify-between gap-4 px-4 py-2.5">
+                <span className="font-medium">{unitLabel(unit, item.unit)}</span>
+                <span className="tabular font-semibold">{money(unit.price)}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section aria-labelledby="batches-heading" className="mt-8">
         <h2 id="batches-heading" className="text-xl font-bold">

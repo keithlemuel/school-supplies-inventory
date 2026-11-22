@@ -6,15 +6,16 @@ import { PageLoading } from "@/components/page-loading";
 import { Button } from "@/components/ui/button";
 import { signOut } from "@/features/auth/actions";
 import { getCurrentUser } from "@/features/auth/session";
+import { categoryTree } from "@/features/inventory/categories";
 import { getSettings, listCategories } from "@/features/inventory/queries";
-import { deleteCategory } from "@/features/settings/actions";
-import { AddCategoryForm, SettingsForm } from "@/features/settings/settings-forms";
+import { AddCategoryForm, CategoryList, SettingsForm } from "@/features/settings/settings-forms";
 
 export const metadata: Metadata = { title: "Settings" };
 
 async function Content() {
   const user = await getCurrentUser();
   const [settings, categories] = await Promise.all([getSettings(), listCategories()]);
+  const tree = categoryTree(categories);
 
   return (
     <>
@@ -35,28 +36,16 @@ async function Content() {
           <h2 id="categories-heading" className="text-xl font-bold">
             Categories
           </h2>
-          <p className="mt-1 mb-4 text-muted-foreground">Groups for the item list, such as Notebooks, Pens or Paper.</p>
-          {categories.length > 0 ? (
-            <ul className="mb-5 divide-y rounded-md border">
-              {categories.map((category) => (
-                <li key={category.id} className="flex items-center justify-between gap-3 py-1.5 pr-1.5 pl-3">
-                  <span className="font-medium">{category.name}</span>
-                  <form
-                    action={async () => {
-                      "use server";
-                      await deleteCategory(category.id);
-                    }}
-                  >
-                    <Button type="submit" variant="ghost" size="sm" className="text-destructive">
-                      Delete<span className="sr-only"> {category.name}</span>
-                    </Button>
-                  </form>
-                </li>
-              ))}
-            </ul>
-          ) : null}
-          <AddCategoryForm />
-          <p className="mt-3 text-sm text-muted-foreground">Deleting a category keeps its items; they just lose the category.</p>
+          <p className="mt-1 mb-4 max-w-[65ch] text-muted-foreground">
+            Groups for the item list, such as Notebooks or Paper. A main category can hold subcategories: Pens can
+            hold Ballpens, Pencils and Markers.
+          </p>
+          <CategoryList tree={tree} />
+          <AddCategoryForm mains={tree.map(({ id, name }) => ({ id, name }))} />
+          <p className="mt-3 text-sm text-muted-foreground">
+            Renaming a category renames it on every item. Deleting one keeps its items; they just lose the category, and
+            its subcategories become main categories.
+          </p>
         </section>
 
         <section aria-labelledby="account-heading" className="rounded-lg border bg-card p-4 sm:p-6">

@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { PageHeader } from "@/components/page-header";
 import { PageLoading } from "@/components/page-loading";
 import { getCurrentUser } from "@/features/auth/session";
+import { categoryOptions } from "@/features/inventory/categories";
 import { ItemForm } from "@/features/inventory/components/item-form";
 import { listCategories } from "@/features/inventory/queries";
 
@@ -15,7 +16,7 @@ async function Content() {
   return (
     <>
       <PageHeader title="Add item" description="Add the item once. Stock is recorded separately, each time a delivery arrives." />
-      <ItemForm categories={categories} />
+      <ItemForm categories={categoryOptions(categories)} />
     </>
   );
 }

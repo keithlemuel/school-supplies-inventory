@@ -77,3 +77,29 @@
     color-mix(in oklch, var(--color-foreground), transparent 72%) calc(100% / 12)
   );
 }
+
+/* Pad-paper rules: one pale blue line at the bottom of every 2.25rem row. */
+@utility paper-rules {
+  background-image: linear-gradient(to bottom, transparent calc(2.25rem - 1px), #a9c6e4 calc(2.25rem - 1px));
+  background-size: 100% 2.25rem;
+}
+
+/* Printing (and "Save as PDF"): white paper, sensible margins, colours kept. */
+@media print {
+  body {
+    background: #fff;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+  @page {
+    margin: 14mm;
+  }
+  /* The delivery receipt fills the sheet like the store's Excel form: A4 with narrow margins. */
+  @page receipt {
+    size: A4 portrait;
+    margin: 8mm;
+  }
+  .receipt-sheet {
+    page: receipt;
+  }
+}
