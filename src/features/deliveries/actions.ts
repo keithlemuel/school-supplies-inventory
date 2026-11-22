@@ -112,3 +112,11 @@ export async function createOrder(_prev: ActionResult, formData: FormData): Prom
 function lineError(message: string): ActionResult {
   return { ok: false, message: "Check the items on the order.", fieldErrors: { lines: message } };
 }
+
+/** Marks an order paid (today) or back to unpaid. */
+export async function setOrderPaid(id: string, paid: boolean): Promise<void> {
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("set_delivery_receipt_paid", { p_receipt_id: id, p_paid: paid });
+  if (error) throw new Error(`Could not update the order: ${error.message}`);
+  revalidatePath("/orders", "layout");
+}

@@ -18,13 +18,20 @@ export type ReceiptSummary = {
   deliveredOn: string;
   total: number;
   lineCount: number;
+  /** The day it was marked paid; null while the customer still owes it. */
+  paidOn: string | null;
 };
 
-export async function listDeliveryReceipts(): Promise<ReceiptSummary[]> {
+export type PaymentFilter = "paid" | "unpaid";
+
+export async function listDeliveryReceipts({ payment }: { payment?: PaymentFilter } = {}): Promise<ReceiptSummary[]> {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("delivery_receipts")
-    .select("id, number, customer_name, delivered_on, total, delivery_receipt_lines(count)")
+    .select("id, number, customer_name, delivered_on, total, paid_on, delivery_receipt_lines(count)");
+  if (payment === "paid") query = query.not("paid_on", "is", null);
+  if (payment === "unpaid") query = query.is("paid_on", null);
+  const { data, error } = await query
     .order("delivered_on", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(200);
@@ -36,7 +43,16 @@ export async function listDeliveryReceipts(): Promise<ReceiptSummary[]> {
     deliveredOn: row.delivered_on,
     total: Number(row.total),
     lineCount: row.delivery_receipt_lines[0]?.count ?? 0,
+    paidOn: row.paid_on,
   }));
+}
+
+/** How many orders are still unpaid, and how much is owed on them in all. */
+export async function getUnpaidSummary(): Promise<{ count: number; total: number }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase.from("delivery_receipts").select("total").is("paid_on", null);
+  if (error) throw new Error(`Could not load unpaid orders: ${error.message}`);
+  return { count: data.length, total: data.reduce((sum, row) => sum + Number(row.total), 0) };
 }
 
 export type ReceiptLine = {
@@ -57,6 +73,9 @@ export type Receipt = {
   deliveredOn: string;
   total: number;
   by: string | null;
+  paidOn: string | null;
+  /** Who marked it paid. */
+  paidBy: string | null;
   lines: ReceiptLine[];
 };
 
@@ -65,7 +84,8 @@ export async function getDeliveryReceipt(id: string): Promise<Receipt | null> {
   const { data, error } = await supabase
     .from("delivery_receipts")
     .select(
-      "id, number, customer_name, customer_address, delivered_on, total, profiles(full_name), delivery_receipt_lines(id, position, description, unit, quantity, unit_price, stock_quantity)",
+      // Two links to profiles (who made it, who marked it paid), so each is named.
+      "id, number, customer_name, customer_address, delivered_on, total, paid_on, creator:profiles!delivery_receipts_created_by_fkey(full_name), payer:profiles!delivery_receipts_paid_by_fkey(full_name), delivery_receipt_lines(id, position, description, unit, quantity, unit_price, stock_quantity)",
     )
     .eq("id", id)
     .maybeSingle();
@@ -83,7 +103,9 @@ export async function getDeliveryReceipt(id: string): Promise<Receipt | null> {
     customerAddress: data.customer_address,
     deliveredOn: data.delivered_on,
     total: Number(data.total),
-    by: data.profiles?.full_name ?? null,
+    by: data.creator?.full_name ?? null,
+    paidOn: data.paid_on,
+    paidBy: data.payer?.full_name ?? null,
     lines: [...data.delivery_receipt_lines]
       .sort((a, b) => a.position - b.position)
       .map((line) => ({
