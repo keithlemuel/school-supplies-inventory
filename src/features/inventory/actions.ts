@@ -148,11 +148,21 @@ export async function stockIn(_prev: ActionResult, formData: FormData): Promise<
   });
   if (error) return fromDbError(error);
 
-  const { data: item } = await supabase.from("items").select("name, unit").eq("id", input.itemId).maybeSingle();
+  const { data: item } = await supabase
+    .from("item_stock")
+    .select("name, unit, on_hand")
+    .eq("id", input.itemId)
+    .maybeSingle();
+  // Say how the shelf is now split, so the older stock is not lost in the new total.
+  const earlier = (item?.on_hand ?? input.quantity) - input.quantity;
+  const added = `Added ${qty(input.quantity, item?.unit)} of ${item?.name ?? "the item"}.`;
   revalidatePath("/", "layout");
   return {
     ok: true,
-    message: `Added ${qty(input.quantity, item?.unit)} of ${item?.name ?? "the item"}.`,
+    message:
+      earlier > 0
+        ? `${added} On the shelf now: ${qty(earlier, item?.unit)} from earlier deliveries and ${qty(input.quantity, item?.unit)} from this one.`
+        : added,
     stamp: Date.now(),
     // A delivery usually has several items, so the date and supplier stay filled in.
     keep: { receivedOn: input.receivedOn, supplier: input.supplier, reason: input.reason },

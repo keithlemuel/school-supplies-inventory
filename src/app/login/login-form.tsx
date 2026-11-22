@@ -6,10 +6,10 @@ import { useFormAction } from "@/components/use-form-action";
 import { signIn } from "@/features/auth/actions";
 
 export function LoginForm() {
-  const { state, pending, onSubmit } = useFormAction(signIn);
+  const { state, pending, onSubmit, action } = useFormAction(signIn);
 
   return (
-    <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
+    <form action={action} onSubmit={onSubmit} className="mt-8 flex flex-col gap-5">
       <FormMessage ok={false} message={state.message} />
       <Field label="Email" htmlFor="email">
         <TextInput id="email" name="email" type="email" autoComplete="username" required autoFocus />

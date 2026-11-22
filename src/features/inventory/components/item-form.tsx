@@ -14,12 +14,12 @@ export function ItemForm({
   item?: ItemStock;
   categories: { id: string; name: string }[];
 }) {
-  const { state, pending, onSubmit } = useFormAction(saveItem);
+  const { state, pending, onSubmit, action } = useFormAction(saveItem);
   const errors = state.fieldErrors ?? {};
   const invalid = (name: string) => Boolean(errors[name]) || undefined;
 
   return (
-    <form onSubmit={onSubmit} className="flex max-w-2xl flex-col gap-5">
+    <form action={action} onSubmit={onSubmit} className="flex max-w-2xl flex-col gap-5">
       <FormMessage ok={false} message={state.message} />
       {item ? <input type="hidden" name="id" value={item.id} /> : null}
 

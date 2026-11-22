@@ -7,11 +7,11 @@ import type { Settings } from "@/features/inventory/queries";
 import { addCategory, saveSettings } from "./actions";
 
 export function SettingsForm({ settings }: { settings: Settings }) {
-  const { state, pending, onSubmit } = useFormAction(saveSettings);
+  const { state, pending, onSubmit, action } = useFormAction(saveSettings);
   const errors = state.fieldErrors ?? {};
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form action={action} onSubmit={onSubmit} className="flex flex-col gap-5">
       <FormMessage ok={state.ok} message={state.message} />
       <div className="grid gap-5 sm:grid-cols-2">
         <Field
@@ -41,9 +41,9 @@ export function SettingsForm({ settings }: { settings: Settings }) {
 }
 
 export function AddCategoryForm() {
-  const { state, pending, onSubmit } = useFormAction(addCategory);
+  const { state, pending, onSubmit, action } = useFormAction(addCategory);
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-1.5">
+    <form action={action} onSubmit={onSubmit} className="flex flex-col gap-1.5">
       <label htmlFor="category-name" className="text-sm font-semibold">
         New category
       </label>

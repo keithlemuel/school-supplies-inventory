@@ -20,5 +20,7 @@ export function useFormAction(action: (prev: ActionResult, formData: FormData) =
     const data = new FormData(event.currentTarget);
     startTransition(() => dispatch(data));
   };
-  return { state, pending, onSubmit };
+  // `action` covers a submit that happens before the page's scripts have loaded:
+  // React holds it and replays it, instead of the browser reloading the page.
+  return { state, pending, onSubmit, action: dispatch };
 }

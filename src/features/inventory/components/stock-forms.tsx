@@ -21,15 +21,16 @@ export function StockInForm({
   today: string;
   defaultItemId?: string;
 }) {
-  const { state, pending, onSubmit } = useFormAction(stockIn);
+  const { state, pending, onSubmit, action } = useFormAction(stockIn);
   // After a save the fields start fresh for the next item on the delivery.
   const [picked, setPicked] = useState({ stamp: state.stamp, id: defaultItemId ?? "" });
   const itemId = picked.stamp === state.stamp ? picked.id : "";
+  const item = items.find((option) => option.id === itemId);
   const errors = state.fieldErrors ?? {};
   const keep = state.keep ?? {};
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form action={action} onSubmit={onSubmit} className="flex flex-col gap-5">
       <FormMessage ok={state.ok} message={state.message} />
 
       <Field label="Item" htmlFor="item-search" error={errors.itemId}>
@@ -41,6 +42,14 @@ export function StockInForm({
           invalid={Boolean(errors.itemId)}
         />
       </Field>
+
+      {item && item.onHand > 0 ? (
+        <p className="-mt-2 rounded-md bg-muted px-3 py-2 text-sm">
+          <strong>{qty(item.onHand, item.unit)}</strong> already on the shelf
+          {item.oldestReceivedOn ? <>, the oldest received {date(item.oldestReceivedOn)}</> : null}. What you add now is
+          kept as a separate delivery, so you will still see how much of the older stock is left.
+        </p>
+      ) : null}
 
       <div key={state.stamp ?? 0} className="flex flex-col gap-5">
         <div className="grid gap-5 sm:grid-cols-2">
@@ -104,7 +113,7 @@ export function StockOutForm({
   /** Set when the person came from a particular delivery and wants to take from that one. */
   batch?: BatchChoice;
 }) {
-  const { state, pending, onSubmit } = useFormAction(stockOut);
+  const { state, pending, onSubmit, action } = useFormAction(stockOut);
   const [picked, setPicked] = useState({ stamp: state.stamp, id: defaultItemId ?? "", useBatch: Boolean(batch) });
   const fresh = picked.stamp === state.stamp;
   const itemId = fresh ? picked.id : "";
@@ -115,7 +124,7 @@ export function StockOutForm({
   const available = fromBatch ? fromBatch.quantityRemaining : item?.onHand;
 
   return (
-    <form onSubmit={onSubmit} className="flex flex-col gap-5">
+    <form action={action} onSubmit={onSubmit} className="flex flex-col gap-5">
       <FormMessage ok={state.ok} message={state.message} />
 
       <Field label="Item" htmlFor="item-search" error={errors.itemId}>

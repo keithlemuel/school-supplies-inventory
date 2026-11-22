@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Plus, Search } from "lucide-react";
 import { cn } from "cn";
 
-import { AgeBadge, bandForDays } from "@/components/age";
+import { AgeBadge } from "@/components/age";
 import { controlClass, selectClass } from "@/components/control-class";
 import { Empty } from "@/components/empty";
 import { LinkButton } from "@/components/link-button";
@@ -12,8 +12,8 @@ import { PageHeader } from "@/components/page-header";
 import { PageLoading } from "@/components/page-loading";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/features/auth/session";
-import { getSettings, listCategories, listItems, type ItemFilter } from "@/features/inventory/queries";
-import { age, count, money, qty } from "@/lib/format";
+import { listCategories, listItems, listOpenBatches, type Batch, type ItemFilter } from "@/features/inventory/queries";
+import { count, date, money, qty } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Items" };
 
@@ -34,11 +34,16 @@ async function Content({ searchParams }: PageProps<"/items">) {
   const category = one(params.category);
   const show = SHOW.find((option) => option.key === one(params.show))?.key;
 
-  const [settings, categories, items] = await Promise.all([
-    getSettings(),
+  const [categories, items, batches] = await Promise.all([
     listCategories(),
     listItems({ q, category, show }),
+    listOpenBatches(),
   ]);
+  // What is left of each delivery, per item, oldest first.
+  const deliveries = new Map<string, Batch[]>();
+  for (const batch of batches) {
+    deliveries.set(batch.itemId, [...(deliveries.get(batch.itemId) ?? []), batch]);
+  }
   const filtered = Boolean(q || category || show);
 
   const hrefFor = (key: ItemFilter["show"]) => {
@@ -54,7 +59,7 @@ async function Content({ searchParams }: PageProps<"/items">) {
     <>
       <PageHeader
         title="Items"
-        description="Everything the shop sells, with what is on hand and how old the oldest of it is."
+        description="Everything the store sells. On hand is split by delivery, so you can see how much is left from the older stock and how much is new."
         actions={
           <LinkButton href="/items/new">
             <Plus /> Add item
@@ -125,7 +130,7 @@ async function Content({ searchParams }: PageProps<"/items">) {
                 <tr>
                   <th className="px-4 py-2.5 font-semibold">Item</th>
                   <th className="px-4 py-2.5 text-right font-semibold">On hand</th>
-                  <th className="px-4 py-2.5 font-semibold">Oldest stock</th>
+                  <th className="px-4 py-2.5 font-semibold">Left from each delivery</th>
                   <th className="hidden px-4 py-2.5 text-right font-semibold md:table-cell">Price</th>
                 </tr>
               </thead>
@@ -145,17 +150,7 @@ async function Content({ searchParams }: PageProps<"/items">) {
                       {item.isLow ? <span className="block text-sm font-semibold text-aging">Running low</span> : null}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      {item.oldestAgeDays == null ? (
-                        <span className="text-muted-foreground">—</span>
-                      ) : (
-                        <span className="flex items-center gap-2">
-                          <AgeBadge band={bandForDays(item.oldestAgeDays, settings.agingAfterDays, settings.oldAfterDays)} />
-                          <span className="tabular text-sm text-muted-foreground">
-                            {age(item.oldestAgeDays)}
-                            {item.oldQuantity > 0 ? `, ${count(item.oldQuantity)} old` : ""}
-                          </span>
-                        </span>
-                      )}
+                      <DeliverySplit batches={deliveries.get(item.id) ?? []} />
                     </td>
                     <td className="tabular hidden px-4 py-3 text-right whitespace-nowrap md:table-cell">{money(item.sellingPrice)}</td>
                   </tr>
@@ -171,6 +166,29 @@ async function Content({ searchParams }: PageProps<"/items">) {
         ) : null}
       </div>
     </>
+  );
+}
+
+/** "20 from Aug 14, 50 from Nov 22": the older stock first, then the newer. */
+function DeliverySplit({ batches }: { batches: Batch[] }) {
+  if (batches.length === 0) return <span className="text-muted-foreground">—</span>;
+  const shown = batches.slice(0, 3);
+  const more = batches.length - shown.length;
+  return (
+    <ul className="flex flex-col gap-1">
+      {shown.map((batch) => (
+        <li key={batch.id} className="flex items-center gap-2">
+          <span className="tabular min-w-10 text-right font-semibold">{count(batch.quantityRemaining)}</span>
+          <span className="tabular text-sm text-muted-foreground">from {date(batch.receivedOn)}</span>
+          <AgeBadge band={batch.ageBand} className="h-5 px-1.5" />
+        </li>
+      ))}
+      {more > 0 ? (
+        <li className="text-sm text-muted-foreground">
+          and {more} newer {more === 1 ? "delivery" : "deliveries"}
+        </li>
+      ) : null}
+    </ul>
   );
 }
 
