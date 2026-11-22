@@ -1,0 +1,79 @@
+@import "tailwindcss";
+
+/*
+  The palette is a classroom: the green of the chalkboard for the frame, the
+  yellow of a pencil for the main action, and three marking-pen inks for how
+  long stock has been sitting (green new, amber aging, red old).
+*/
+
+@theme inline {
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-display);
+}
+
+@theme {
+  --color-background: #f2f5f3;
+  --color-foreground: #15231d;
+  --color-card: #ffffff;
+  --color-muted: #e6ebe8;
+  --color-muted-foreground: #56645d;
+  --color-border: #d5ddd8;
+  --color-input: #b4c0b9;
+  --color-ring: #27509f;
+  --color-destructive: #b8362c;
+
+  --color-board: #1e4638;
+  --color-board-deep: #143026;
+  --color-pencil: #f4bf2d;
+  --color-pencil-deep: #e0aa12;
+
+  --color-fresh: #1f7a4d;
+  --color-aging: #8f5d00;
+  --color-old: #b8362c;
+  --color-link: #27509f;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+  html {
+    font-family: var(--font-sans);
+  }
+  body {
+    background: var(--color-background);
+    color: var(--color-foreground);
+  }
+  h1,
+  h2,
+  h3 {
+    font-family: var(--font-heading);
+  }
+  /* Quantities and prices line up in columns. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+/*
+  Native selects draw their arrow tight against the right edge. This replaces
+  it with our own chevron, inset to match the text padding on the left.
+*/
+@utility select-chevron {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2356645d' stroke-width='2.25' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.125rem;
+}
+
+/* The month marks on the age ruler: a short tick every twelfth of the bar. */
+@utility ruler-ticks {
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(100% / 12 - 1px),
+    color-mix(in oklch, var(--color-foreground), transparent 72%) calc(100% / 12 - 1px),
+    color-mix(in oklch, var(--color-foreground), transparent 72%) calc(100% / 12)
+  );
+}
