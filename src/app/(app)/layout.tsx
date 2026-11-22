@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Suspense } from "react";
-import { History, LogOut, Menu, ReceiptText, Settings, Tags } from "lucide-react";
+import { History, Hourglass, LogOut, Menu, ReceiptText, Settings, Tags } from "lucide-react";
 
+import { MobileMenu } from "@/components/app-shell/mobile-menu";
 import { MobileTabs, NavLinks } from "@/components/app-shell/nav-links";
 import { signOut } from "@/features/auth/actions";
 import { getCurrentUser } from "@/features/auth/session";
@@ -31,31 +32,40 @@ export default function AppLayout({ children }: LayoutProps<"/">) {
           <Link href="/" className="min-w-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-white/60">
             <Brand markClassName="size-8" className="gap-2.5" />
           </Link>
-          <details className="relative">
-            <summary className="flex size-10 cursor-pointer list-none items-center justify-center rounded-md outline-none hover:bg-white/10 focus-visible:ring-3 focus-visible:ring-white/60 [&::-webkit-details-marker]:hidden">
-              <Menu className="size-5.5" />
-              <span className="sr-only">More pages</span>
-            </summary>
-            <div className="absolute top-12 right-0 w-52 rounded-md border bg-white p-1.5 text-foreground shadow-lg">
-              <Link href="/orders" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
-                <ReceiptText className="size-4.5" /> Orders
-              </Link>
-              <Link href="/price-list" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
-                <Tags className="size-4.5" /> Price list
-              </Link>
-              <Link href="/history" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
-                <History className="size-4.5" /> History
-              </Link>
-              <Link href="/settings" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
-                <Settings className="size-4.5" /> Settings
-              </Link>
-              <form action={signOut}>
-                <button className="flex h-11 w-full items-center gap-3 rounded px-3 font-medium hover:bg-muted">
-                  <LogOut className="size-4.5" /> Sign out
-                </button>
-              </form>
-            </div>
-          </details>
+          <MobileMenu
+            button={
+              <>
+                <span className="relative">
+                  <Menu className="size-5.5" />
+                  <Suspense>
+                    <OldStockDot />
+                  </Suspense>
+                </span>
+                <span className="sr-only">More pages</span>
+              </>
+            }
+          >
+            <Suspense fallback={<OldStockMenuLink count={0} />}>
+              <OldStockMenuItem />
+            </Suspense>
+            <Link href="/orders" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
+              <ReceiptText className="size-4.5" /> Orders
+            </Link>
+            <Link href="/price-list" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
+              <Tags className="size-4.5" /> Price list
+            </Link>
+            <Link href="/history" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
+              <History className="size-4.5" /> History
+            </Link>
+            <Link href="/settings" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
+              <Settings className="size-4.5" /> Settings
+            </Link>
+            <form action={signOut}>
+              <button className="flex h-11 w-full items-center gap-3 rounded px-3 font-medium hover:bg-muted">
+                <LogOut className="size-4.5" /> Sign out
+              </button>
+            </form>
+          </MobileMenu>
         </header>
 
         <main className="mx-auto w-full max-w-[76rem] flex-1 px-4 pt-5 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:px-10 lg:py-9 print:max-w-none print:p-0">
@@ -79,8 +89,35 @@ async function Sidebar() {
   return <NavLinks oldBatches={await countOldBatches()} />;
 }
 
-async function MobileNav() {
-  return <MobileTabs oldBatches={await countOldBatches()} />;
+function MobileNav() {
+  return <MobileTabs />;
+}
+
+/** A red dot on the phone menu button while there is old stock to clear, since Old stock is inside that menu. */
+async function OldStockDot() {
+  const old = await countOldBatches();
+  if (old === 0) return null;
+  return (
+    <span aria-hidden className="absolute -top-0.5 -right-1 size-2.5 rounded-full bg-[#e0685e] ring-2 ring-board" />
+  );
+}
+
+async function OldStockMenuItem() {
+  return <OldStockMenuLink count={await countOldBatches()} />;
+}
+
+function OldStockMenuLink({ count }: { count: number }) {
+  return (
+    <Link href="/old-stock" className="flex h-11 items-center gap-3 rounded px-3 font-medium hover:bg-muted">
+      <Hourglass className="size-4.5" /> Old stock
+      {count > 0 ? (
+        <span className="tabular ml-auto rounded-full bg-old px-2 py-px text-xs font-bold text-white">
+          {count > 99 ? "99+" : count}
+          <span className="sr-only"> old {count === 1 ? "delivery" : "deliveries"}</span>
+        </span>
+      ) : null}
+    </Link>
+  );
 }
 
 async function Account() {
