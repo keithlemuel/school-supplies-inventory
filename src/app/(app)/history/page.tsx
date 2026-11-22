@@ -1,12 +1,11 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { cn } from "cn";
 
-import { selectClass } from "@/components/control-class";
 import { Empty } from "@/components/empty";
 import { LinkButton } from "@/components/link-button";
 import { PageHeader } from "@/components/page-header";
 import { PageLoading } from "@/components/page-loading";
+import { Select } from "@/components/select";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/features/auth/session";
 import { MovementsTable } from "@/features/inventory/components/movements-table";
@@ -40,19 +39,24 @@ async function Content({ searchParams }: PageProps<"/history">) {
       <PageHeader title="History" description="Every quantity that went in or out, newest first, and who recorded it." />
 
       <form className="flex flex-wrap gap-2">
-        <select name="direction" defaultValue={direction ?? ""} aria-label="In or out" className={cn(selectClass, "w-auto min-w-36")}>
-          <option value="">In and out</option>
-          <option value="in">Stock in only</option>
-          <option value="out">Stock out only</option>
-        </select>
-        <select name="reason" defaultValue={reason ?? ""} aria-label="Reason" className={cn(selectClass, "w-auto min-w-44")}>
-          <option value="">Any reason</option>
-          {Object.entries(REASONS).map(([key, label]) => (
-            <option key={key} value={key}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <Select
+          name="direction"
+          defaultValue={direction ?? ""}
+          aria-label="In or out"
+          options={[
+            { value: "", label: "In and out" },
+            { value: "in", label: "Stock in only" },
+            { value: "out", label: "Stock out only" },
+          ]}
+          className="w-auto min-w-36"
+        />
+        <Select
+          name="reason"
+          defaultValue={reason ?? ""}
+          aria-label="Reason"
+          options={[{ value: "", label: "Any reason" }, ...Object.entries(REASONS).map(([value, label]) => ({ value, label }))]}
+          className="w-auto min-w-44"
+        />
         <Button type="submit" variant="outline">
           Filter
         </Button>

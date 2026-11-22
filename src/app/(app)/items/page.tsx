@@ -5,14 +5,15 @@ import { Plus, Search } from "lucide-react";
 import { cn } from "cn";
 
 import { AgeBadge } from "@/components/age";
-import { controlClass, selectClass } from "@/components/control-class";
+import { controlClass } from "@/components/control-class";
 import { Empty } from "@/components/empty";
 import { LinkButton } from "@/components/link-button";
 import { PageHeader } from "@/components/page-header";
 import { PageLoading } from "@/components/page-loading";
+import { Select } from "@/components/select";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/features/auth/session";
-import { categoryOptions } from "@/features/inventory/categories";
+import { categoryOptions, categorySelectOptions } from "@/features/inventory/categories";
 import { listCategories, listItems, listOpenBatches, type Batch, type ItemFilter } from "@/features/inventory/queries";
 import { count, date, money, qty } from "@/lib/format";
 
@@ -81,14 +82,13 @@ async function Content({ searchParams }: PageProps<"/items">) {
             className={cn(controlClass, "h-10 pl-10")}
           />
         </div>
-        <select name="category" defaultValue={category} aria-label="Category" className={cn(selectClass, "w-auto min-w-40")}>
-          <option value="">All categories</option>
-          {categoryOptions(categories).map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
+        <Select
+          name="category"
+          defaultValue={category}
+          aria-label="Category"
+          options={categorySelectOptions(categoryOptions(categories), "All categories")}
+          className="w-auto min-w-40"
+        />
         <Button type="submit" variant="outline">
           Search
         </Button>

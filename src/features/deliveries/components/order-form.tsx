@@ -4,7 +4,9 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { cn } from "cn";
 
-import { Field, FormMessage, NativeSelect, TextInput } from "@/components/form";
+import { DatePicker } from "@/components/date-picker";
+import { Field, FormMessage, TextInput } from "@/components/form";
+import { Select } from "@/components/select";
 import { LinkButton } from "@/components/link-button";
 import { Button } from "@/components/ui/button";
 import { useFormAction } from "@/components/use-form-action";
@@ -132,7 +134,7 @@ export function OrderForm({ items, customers, today }: { items: OrderItem[]; cus
             />
           </Field>
           <Field label="Date" htmlFor="deliveredOn" error={errors.deliveredOn}>
-            <TextInput id="deliveredOn" name="deliveredOn" type="date" max={today} defaultValue={today} />
+            <DatePicker id="deliveredOn" name="deliveredOn" today={today} max={today} defaultValue={today} invalid={Boolean(errors.deliveredOn)} />
           </Field>
           <Field label="Delivery No." htmlFor="number" optional hint="Leave empty to use the next number.">
             <TextInput id="number" name="number" autoComplete="off" />
@@ -183,19 +185,13 @@ export function OrderForm({ items, customers, today }: { items: OrderItem[]; cus
                   className="col-span-2 lg:col-span-1"
                 />
                 {item ? (
-                  <NativeSelect
+                  <Select
                     aria-label={`Line ${n}: unit`}
                     value={row.unitId}
-                    onChange={(event) => pickUnit(row.key, event.target.value)}
+                    onChange={(unitId) => pickUnit(row.key, unitId)}
+                    options={[{ value: "", label: item.unit }, ...item.units.map((unit) => ({ value: unit.id, label: unitLabel(unit, item.unit) }))]}
                     className="col-span-4 lg:col-span-1"
-                  >
-                    <option value="">{item.unit}</option>
-                    {item.units.map((unit) => (
-                      <option key={unit.id} value={unit.id}>
-                        {unitLabel(unit, item.unit)}
-                      </option>
-                    ))}
-                  </NativeSelect>
+                  />
                 ) : (
                   <TextInput
                     autoComplete="off"

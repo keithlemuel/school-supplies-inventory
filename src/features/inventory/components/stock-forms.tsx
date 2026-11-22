@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useState } from "react";
 
-import { Field, FormMessage, NativeSelect, TextArea, TextInput } from "@/components/form";
+import { DatePicker } from "@/components/date-picker";
+import { Field, FormMessage, TextArea, TextInput } from "@/components/form";
+import { Select } from "@/components/select";
 import { Button } from "@/components/ui/button";
 import { useFormAction } from "@/components/use-form-action";
 import { date, qty } from "@/lib/format";
@@ -63,7 +65,14 @@ export function StockInForm({
             error={errors.receivedOn}
             hint="This date is how the stock's age is counted."
           >
-            <TextInput id="receivedOn" name="receivedOn" type="date" max={today} defaultValue={keep.receivedOn ?? today} />
+            <DatePicker
+              id="receivedOn"
+              name="receivedOn"
+              today={today}
+              max={today}
+              defaultValue={keep.receivedOn ?? today}
+              invalid={Boolean(errors.receivedOn)}
+            />
           </Field>
           <Field
             label="Cost per unit"
@@ -79,13 +88,12 @@ export function StockInForm({
           </Field>
         </div>
         <Field label="Reason" htmlFor="reason">
-          <NativeSelect id="reason" name="reason" defaultValue={keep.reason ?? "delivery"}>
-            {Object.entries(IN_REASONS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </NativeSelect>
+          <Select
+            id="reason"
+            name="reason"
+            defaultValue={keep.reason ?? "delivery"}
+            options={Object.entries(IN_REASONS).map(([value, label]) => ({ value, label }))}
+          />
         </Field>
         <Field label="Note" htmlFor="note" optional error={errors.note}>
           <TextArea id="note" name="note" rows={2} />
@@ -120,14 +128,14 @@ function QuantityWithUnit({ item, invalid }: { item: ItemOption | undefined; inv
         className="min-w-0 flex-1"
       />
       {item && item.units.length > 0 ? (
-        <NativeSelect key={item.id} name="unitId" aria-label="Unit" defaultValue="" className="w-auto max-w-[55%]">
-          <option value="">{item.unit}</option>
-          {item.units.map((unit) => (
-            <option key={unit.id} value={unit.id}>
-              {unitLabel(unit, item.unit)}
-            </option>
-          ))}
-        </NativeSelect>
+        <Select
+          key={item.id}
+          name="unitId"
+          aria-label="Unit"
+          defaultValue=""
+          options={[{ value: "", label: item.unit }, ...item.units.map((unit) => ({ value: unit.id, label: unitLabel(unit, item.unit) }))]}
+          className="w-auto max-w-[55%]"
+        />
       ) : null}
     </div>
   );
@@ -210,17 +218,23 @@ export function StockOutForm({
             <QuantityWithUnit item={item} invalid={Boolean(errors.quantity)} />
           </Field>
           <Field label="Date" htmlFor="occurredOn" error={errors.occurredOn}>
-            <TextInput id="occurredOn" name="occurredOn" type="date" max={today} defaultValue={keep.occurredOn ?? today} />
+            <DatePicker
+              id="occurredOn"
+              name="occurredOn"
+              today={today}
+              max={today}
+              defaultValue={keep.occurredOn ?? today}
+              invalid={Boolean(errors.occurredOn)}
+            />
           </Field>
         </div>
         <Field label="Reason" htmlFor="reason" error={errors.reason}>
-          <NativeSelect id="reason" name="reason" defaultValue={keep.reason ?? defaultReason ?? "sold"}>
-            {Object.entries(OUT_REASONS).map(([key, label]) => (
-              <option key={key} value={key}>
-                {label}
-              </option>
-            ))}
-          </NativeSelect>
+          <Select
+            id="reason"
+            name="reason"
+            defaultValue={keep.reason ?? defaultReason ?? "sold"}
+            options={Object.entries(OUT_REASONS).map(([value, label]) => ({ value, label }))}
+          />
         </Field>
         <Field label="Note" htmlFor="note" optional error={errors.note}>
           <TextArea id="note" name="note" rows={2} />
