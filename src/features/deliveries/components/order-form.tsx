@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, X } from "lucide-react";
 import { cn } from "cn";
 
+import { Combobox } from "@/components/combobox";
 import { DatePicker } from "@/components/date-picker";
 import { Field, FormMessage, TextInput } from "@/components/form";
 import { Select } from "@/components/select";
@@ -64,6 +65,8 @@ export function OrderForm({ items, customers, today }: { items: OrderItem[]; cus
 
   const byName = new Map(items.map((item) => [item.name.trim().toLowerCase(), item]));
   const byId = new Map(items.map((item) => [item.id, item]));
+  const itemSuggestions = items.map((item) => ({ value: item.name, detail: `${qty(item.onHand, item.unit)} on hand` }));
+  const customerSuggestions = customers.map((customer) => ({ value: customer.name, detail: customer.address ?? undefined }));
 
   const change = (key: number, update: (row: Row) => Row) =>
     setRows((current) => current.map((row) => (row.key === key ? update(row) : row)));
@@ -101,26 +104,19 @@ export function OrderForm({ items, customers, today }: { items: OrderItem[]; cus
         <h2 className="mb-4 text-xl font-bold">Who it is for</h2>
         <div className="grid gap-5 sm:grid-cols-2">
           <Field label="Sold to" htmlFor="customerName" error={errors.customerName} hint="A school, office or person. Past customers are suggested as you type.">
-            <TextInput
+            <Combobox
               id="customerName"
               name="customerName"
-              list="order-customers"
-              autoComplete="off"
               value={customerName}
-              aria-invalid={Boolean(errors.customerName) || undefined}
-              onChange={(event) => {
-                const name = event.target.value;
+              invalid={Boolean(errors.customerName)}
+              suggestions={customerSuggestions}
+              onChange={(name) => {
                 setCustomerName(name);
                 // A known customer brings their address along, unless one was typed already.
                 const known = customers.find((customer) => customer.name.toLowerCase() === name.trim().toLowerCase());
                 if (known?.address && !addressTyped) setAddress(known.address);
               }}
             />
-            <datalist id="order-customers">
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.name} />
-              ))}
-            </datalist>
           </Field>
           <Field label="Address" htmlFor="customerAddress" optional>
             <TextInput
@@ -148,11 +144,6 @@ export function OrderForm({ items, customers, today }: { items: OrderItem[]; cus
           Type an item&rsquo;s name and pick it from the suggestions to take it from stock. Anything else you type is
           written on the receipt as it is, and stock is left alone.
         </p>
-        <datalist id="order-items">
-          {items.map((item) => (
-            <option key={item.id} value={item.name} />
-          ))}
-        </datalist>
 
         <ul className="flex flex-col gap-4 lg:gap-2.5">
           {rows.map((row, index) => {
@@ -161,13 +152,12 @@ export function OrderForm({ items, customers, today }: { items: OrderItem[]; cus
             return (
               <li key={row.key} className="grid grid-cols-6 items-start gap-x-2 gap-y-1.5 border-b pb-4 last:border-b-0 lg:grid-cols-[minmax(0,1fr)_5.5rem_9.5rem_7rem_7rem_2.25rem] lg:border-b-0 lg:pb-0">
                 <div className="col-span-6 lg:col-span-1">
-                  <TextInput
-                    list="order-items"
-                    autoComplete="off"
+                  <Combobox
                     placeholder="Item or description"
                     aria-label={`Line ${n}: item or description`}
                     value={row.description}
-                    onChange={(event) => describe(row.key, event.target.value)}
+                    suggestions={itemSuggestions}
+                    onChange={(description) => describe(row.key, description)}
                   />
                   {row.description.trim() ? (
                     <p className={cn("mt-1 text-sm", item ? "text-fresh" : "text-muted-foreground")}>

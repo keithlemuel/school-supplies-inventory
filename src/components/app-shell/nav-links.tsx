@@ -84,20 +84,22 @@ export function NavLinks({ oldBatches }: { oldBatches: number }) {
   );
 }
 
-/** Phone navigation: a tab bar within thumb reach, with stock in and out in the middle. */
-export function MobileTabs({ oldBatches }: { oldBatches: number }) {
+/**
+ * Phone navigation: a tab bar within thumb reach, with stock in and out in the
+ * middle. Old stock lives in the header menu instead, with its count.
+ */
+export function MobileTabs() {
   const pathname = usePathname();
   const tabs: Item[] = [
     { href: "/", label: "Overview", icon: LayoutDashboard, match: (p) => p === "/" },
     { href: "/items", label: "Items", icon: ClipboardList, match: (p) => p.startsWith("/items") },
     { href: "/stock-in", label: "Stock in", icon: PackagePlus, match: (p) => p.startsWith("/stock-in") },
     { href: "/stock-out", label: "Stock out", icon: PackageMinus, match: (p) => p.startsWith("/stock-out") },
-    { href: "/old-stock", label: "Old stock", icon: Hourglass, badge: oldBatches, match: (p) => p.startsWith("/old-stock") },
   ];
 
   return (
     <nav aria-label="Main" className="fixed inset-x-0 bottom-0 z-30 border-t bg-white pb-[env(safe-area-inset-bottom)] lg:hidden print:hidden">
-      <ul className="mx-auto grid max-w-xl grid-cols-5">
+      <ul className="mx-auto grid max-w-xl grid-cols-4">
         {tabs.map((tab) => {
           const active = tab.match(pathname);
           return (

@@ -4,13 +4,16 @@ import { notFound } from "next/navigation";
 import { Suspense } from "react";
 import { Printer } from "lucide-react";
 
+import { SubmitButton } from "@/components/form";
 import { PageHeader } from "@/components/page-header";
 import { PageLoading } from "@/components/page-loading";
 import { PrintButton } from "@/components/print-button";
 import { getCurrentUser } from "@/features/auth/session";
+import { setOrderPaid } from "@/features/deliveries/actions";
+import { PaymentBadge } from "@/features/deliveries/components/payment-badge";
 import { ReceiptSheet } from "@/features/deliveries/components/receipt-sheet";
 import { getDeliveryReceipt } from "@/features/deliveries/queries";
-import { count } from "@/lib/format";
+import { count, date, money } from "@/lib/format";
 
 export const metadata: Metadata = { title: "Delivery receipt" };
 
@@ -40,6 +43,37 @@ async function Content({ params }: PageProps<"/orders/[id]">) {
             </PrintButton>
           }
         />
+
+        <form
+          action={async () => {
+            "use server";
+            await setOrderPaid(receipt.id, !receipt.paidOn);
+          }}
+          className="mb-5 flex flex-wrap items-center gap-x-4 gap-y-3 rounded-lg border bg-card px-4 py-3"
+        >
+          <PaymentBadge paid={Boolean(receipt.paidOn)} className="h-7 px-2.5 text-sm" />
+          <p className="min-w-0 flex-1">
+            {receipt.paidOn ? (
+              <>
+                Paid {date(receipt.paidOn)}
+                {receipt.paidBy ? <span className="text-muted-foreground">, marked by {receipt.paidBy}</span> : null}.
+              </>
+            ) : (
+              <>
+                <strong className="tabular">{money(receipt.total)}</strong> still to collect from {receipt.customerName}.
+              </>
+            )}
+          </p>
+          {receipt.paidOn ? (
+            <SubmitButton variant="ghost" size="sm" pendingLabel="Saving…">
+              Mark as unpaid
+            </SubmitButton>
+          ) : (
+            <SubmitButton variant="accent" pendingLabel="Saving…">
+              Mark as paid
+            </SubmitButton>
+          )}
+        </form>
       </div>
 
       {/* On screen the receipt sits on a sheet of paper; printing sends only the sheet. */}

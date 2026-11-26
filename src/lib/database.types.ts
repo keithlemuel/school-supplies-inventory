@@ -91,14 +91,14 @@ isOneToOne: false
                   ]
                 },"delivery_receipts": {
                   Row: {
-                    "created_at": string,"created_by": string | null,"customer_address": string | null,"customer_id": string | null,"customer_name": string,"delivered_on": string,"id": string,"number": string,"total": number
+                    "created_at": string,"created_by": string | null,"customer_address": string | null,"customer_id": string | null,"customer_name": string,"delivered_on": string,"id": string,"number": string,"paid_by": string | null,"paid_on": string | null,"total": number
                   }
                   ComputedFields: never
                   Insert: {
-                    "created_at"?: string,"created_by"?: string | null,"customer_address"?: string | null,"customer_id"?: string | null,"customer_name": string,"delivered_on": string,"id"?: string,"number": string,"total"?: number
+                    "created_at"?: string,"created_by"?: string | null,"customer_address"?: string | null,"customer_id"?: string | null,"customer_name": string,"delivered_on": string,"id"?: string,"number": string,"paid_by"?: string | null,"paid_on"?: string | null,"total"?: number
                   }
                   Update: {
-                    "created_at"?: string,"created_by"?: string | null,"customer_address"?: string | null,"customer_id"?: string | null,"customer_name"?: string,"delivered_on"?: string,"id"?: string,"number"?: string,"total"?: number
+                    "created_at"?: string,"created_by"?: string | null,"customer_address"?: string | null,"customer_id"?: string | null,"customer_name"?: string,"delivered_on"?: string,"id"?: string,"number"?: string,"paid_by"?: string | null,"paid_on"?: string | null,"total"?: number
                   }
                   Relationships: [
                     {
@@ -112,6 +112,12 @@ isOneToOne: false
       columns: ["customer_id"]
 isOneToOne: false
       referencedRelation: "customers"
+      referencedColumns: ["id"]
+    },{
+      foreignKeyName: "delivery_receipts_paid_by_fkey"
+      columns: ["paid_by"]
+isOneToOne: false
+      referencedRelation: "profiles"
       referencedColumns: ["id"]
     }
                   ]
@@ -319,6 +325,9 @@ isOneToOne: false
                            },
 "remove_stock":
 { Args: { "p_batch_id"?: string,"p_item_id": string,"p_note"?: string,"p_occurred_on"?: string,"p_quantity": number,"p_reason": string }; Returns: undefined
+                           },
+"set_delivery_receipt_paid":
+{ Args: { "p_paid": boolean,"p_receipt_id": string }; Returns: undefined
                            },
 "set_item_units":
 { Args: { "p_item_id": string,"p_units": Json }; Returns: undefined
