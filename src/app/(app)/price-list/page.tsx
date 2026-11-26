@@ -1,18 +1,17 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { Download, FileText } from "lucide-react";
-import { cn } from "cn";
 
 import { BrandMark } from "@/components/brand";
-import { selectClass } from "@/components/control-class";
 import { Empty } from "@/components/empty";
 import { LinkButton } from "@/components/link-button";
 import { PageHeader } from "@/components/page-header";
 import { PageLoading } from "@/components/page-loading";
 import { PrintButton } from "@/components/print-button";
+import { Select } from "@/components/select";
 import { Button } from "@/components/ui/button";
 import { getCurrentUser } from "@/features/auth/session";
-import { categoryOptions } from "@/features/inventory/categories";
+import { categoryOptions, categorySelectOptions } from "@/features/inventory/categories";
 import { PriceCell } from "@/features/inventory/components/price-cell";
 import { getPriceList, pricedOnly, type PriceGroup } from "@/features/inventory/price-list";
 import { listCategories } from "@/features/inventory/queries";
@@ -61,14 +60,13 @@ async function Content({ searchParams }: PageProps<"/price-list">) {
         />
 
         <form className="flex flex-wrap gap-2">
-          <select name="category" defaultValue={chosen?.id ?? ""} aria-label="Category" className={cn(selectClass, "w-auto min-w-48")}>
-            <option value="">All categories</option>
-            {options.map((option) => (
-              <option key={option.id} value={option.id}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+          <Select
+            name="category"
+            defaultValue={chosen?.id ?? ""}
+            aria-label="Category"
+            options={categorySelectOptions(options, "All categories")}
+            className="w-auto min-w-48"
+          />
           <Button type="submit" variant="outline">
             Show
           </Button>

@@ -29,10 +29,24 @@ export function categoryTree(categories: Category[]): CategoryNode[] {
     }));
 }
 
-/** Flat list for a dropdown: each main category followed by its subcategories as "Main › Sub". */
-export function categoryOptions(categories: Category[]): { id: string; label: string }[] {
+/**
+ * Flat list for a dropdown: each main category followed by its subcategories
+ * as "Main › Sub". `nested` is the subcategory's own name, which the open list
+ * shows indented under its main category.
+ */
+export function categoryOptions(categories: Category[]): { id: string; label: string; nested?: string }[] {
   return categoryTree(categories).flatMap((main) => [
     { id: main.id, label: main.name },
-    ...main.children.map((child) => ({ id: child.id, label: categoryPath(main.name, child.name) ?? child.name })),
+    ...main.children.map((child) => ({
+      id: child.id,
+      label: categoryPath(main.name, child.name) ?? child.name,
+      nested: child.name,
+    })),
   ]);
 }
+
+/** The same list in the shape our Select takes, with an "all" or "none" choice first. */
+export function categorySelectOptions(options: { id: string; label: string; nested?: string }[], first: string) {
+  return [{ value: "", label: first }, ...options.map(({ id, label, nested }) => ({ value: id, label, nested }))];
+}
+

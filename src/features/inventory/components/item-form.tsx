@@ -3,11 +3,13 @@
 import { useState } from "react";
 import { Plus, X } from "lucide-react";
 
-import { Field, FormMessage, NativeSelect, TextArea, TextInput } from "@/components/form";
+import { Field, FormMessage, TextArea, TextInput } from "@/components/form";
+import { Select } from "@/components/select";
 import { LinkButton } from "@/components/link-button";
 import { Button } from "@/components/ui/button";
 import { useFormAction } from "@/components/use-form-action";
 import { saveItem } from "../actions";
+import { categorySelectOptions } from "../categories";
 import type { ItemStock } from "../queries";
 import type { ItemUnit } from "../units";
 
@@ -22,7 +24,7 @@ export function ItemForm({
   /** The bigger units the item already has. */
   units?: ItemUnit[];
   /** Dropdown choices, subcategories already labelled with their main category. */
-  categories: { id: string; label: string }[];
+  categories: { id: string; label: string; nested?: string }[];
 }) {
   const { state, pending, onSubmit, action } = useFormAction(saveItem);
   const errors = state.fieldErrors ?? {};
@@ -54,14 +56,12 @@ export function ItemForm({
 
       <div className="grid gap-5 sm:grid-cols-2">
         <Field label="Category" htmlFor="categoryId" optional hint="Add categories and subcategories in Settings.">
-          <NativeSelect id="categoryId" name="categoryId" defaultValue={item?.categoryId ?? ""}>
-            <option value="">No category</option>
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.label}
-              </option>
-            ))}
-          </NativeSelect>
+          <Select
+            id="categoryId"
+            name="categoryId"
+            defaultValue={item?.categoryId ?? ""}
+            options={categorySelectOptions(categories, "No category")}
+          />
         </Field>
         <Field label="Item code" htmlFor="sku" optional error={errors.sku} hint="Your own code or the barcode number.">
           <TextInput id="sku" name="sku" defaultValue={item?.sku ?? ""} aria-invalid={invalid("sku")} />

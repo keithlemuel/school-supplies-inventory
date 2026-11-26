@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 
-import { Field, FormMessage, NativeSelect, TextInput } from "@/components/form";
+import { Field, FormMessage, TextInput } from "@/components/form";
+import { Select } from "@/components/select";
 import { Button } from "@/components/ui/button";
 import { useFormAction } from "@/components/use-form-action";
 import type { CategoryNode } from "@/features/inventory/categories";
@@ -58,14 +59,13 @@ export function AddCategoryForm({ mains }: { mains: { id: string; name: string }
           <label htmlFor="category-parent" className="text-sm font-semibold">
             Goes inside
           </label>
-          <NativeSelect id="category-parent" name="parentId" defaultValue="">
-            <option value="">Nothing (a main category)</option>
-            {mains.map((main) => (
-              <option key={main.id} value={main.id}>
-                {main.name}
-              </option>
-            ))}
-          </NativeSelect>
+          <Select
+            key={state.stamp ?? 0}
+            id="category-parent"
+            name="parentId"
+            defaultValue=""
+            options={[{ value: "", label: "Nothing (a main category)" }, ...mains.map((main) => ({ value: main.id, label: main.name }))]}
+          />
         </div>
         <Button type="submit" variant="outline" disabled={pending}>
           Add

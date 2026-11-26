@@ -4,7 +4,7 @@ import * as React from "react";
 import { useFormStatus } from "react-dom";
 import { cn } from "cn";
 
-import { controlClass, selectClass } from "@/components/control-class";
+import { controlClass } from "@/components/control-class";
 import { Button } from "@/components/ui/button";
 
 export function Field({
@@ -26,7 +26,7 @@ export function Field({
 }) {
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      <label htmlFor={htmlFor} className="text-sm font-semibold text-foreground">
+      <label id={`${htmlFor}-label`} htmlFor={htmlFor} className="text-sm font-semibold text-foreground">
         {label}
         {optional ? <span className="font-normal text-muted-foreground"> (optional)</span> : null}
       </label>
@@ -48,14 +48,6 @@ export function TextInput({ className, ...props }: React.ComponentProps<"input">
 
 export function TextArea({ className, ...props }: React.ComponentProps<"textarea">) {
   return <textarea className={cn(controlClass, "min-h-20 py-2", className)} {...props} />;
-}
-
-export function NativeSelect({ className, children, ...props }: React.ComponentProps<"select">) {
-  return (
-    <select className={cn(selectClass, className)} {...props}>
-      {children}
-    </select>
-  );
 }
 
 export function SubmitButton({
